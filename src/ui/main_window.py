@@ -19,10 +19,13 @@ from PySide6.QtWidgets import (
 )
 
 from core.competitor_dao import CompetitorDAO
+from core.ranking import RankingEngine
+from core.result_exporter import export_all
 from ui.competitors_window import CompetitorsWindow
 from ui.dialogs.absence_dialog import AbsenceDialog
 from ui.dialogs.competition_settings import CompetitionSettingsDialog
 from ui.dialogs.si_import_dialog import SIImportDialog
+from ui.results_window import ResultsWindow
 
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
 
@@ -35,6 +38,7 @@ class MainWindow(QMainWindow):
         self._current_competition_name: str = ""
         self._current_db_path: Optional[Path] = None
         self._competitors_window: Optional[CompetitorsWindow] = None
+        self._results_window: Optional[ResultsWindow] = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -97,8 +101,11 @@ class MainWindow(QMainWindow):
         # --- Results ---
         self._menu_results = mb.addMenu("")
         self._action_calc_rankings = QAction(self)
+        self._action_calc_rankings.setEnabled(False)
         self._action_view_results = QAction(self)
+        self._action_view_results.setEnabled(False)
         self._action_print_results = QAction(self)
+        self._action_print_results.setEnabled(False)
         self._menu_results.addAction(self._action_calc_rankings)
         self._menu_results.addAction(self._action_view_results)
         self._menu_results.addAction(self._action_print_results)
@@ -115,10 +122,14 @@ class MainWindow(QMainWindow):
         self._action_open.triggered.connect(self._on_open_competition)
         self._action_import_csv.triggered.connect(self._on_import_participant_csv)
         self._action_import_si_manager.triggered.connect(self._on_import_si_manager)
+        self._action_export.triggered.connect(self._on_export_results)
         self._action_exit.triggered.connect(self.close)
         self._action_comp_settings.triggered.connect(self._on_comp_settings)
         self._action_competitors.triggered.connect(self._on_competitors)
         self._action_absences.triggered.connect(self._on_absences)
+        self._action_calc_rankings.triggered.connect(self._on_calc_rankings)
+        self._action_view_results.triggered.connect(self._on_view_results)
+        self._action_print_results.triggered.connect(self._on_print_results)
         self._action_about.triggered.connect(self._on_about)
 
     # ------------------------------------------------------------------
@@ -282,6 +293,9 @@ class MainWindow(QMainWindow):
         self._action_import_si_manager.setEnabled(True)
         self._action_export.setEnabled(True)
         self._action_comp_settings.setEnabled(True)
+        self._action_calc_rankings.setEnabled(True)
+        self._action_view_results.setEnabled(True)
+        self._action_print_results.setEnabled(True)
 
     def _on_competitors(self) -> None:
         if self._current_db_path is None:
@@ -403,6 +417,92 @@ class MainWindow(QMainWindow):
             return
         dlg = AbsenceDialog(self._current_db_path, parent=self)
         dlg.exec()
+
+    def _on_calc_rankings(self) -> None:
+        if self._current_db_path is None:
+            return
+        self._open_results_window()
+
+    def _on_view_results(self) -> None:
+        if self._current_db_path is None:
+            return
+        self._open_results_window()
+
+    def _open_results_window(self) -> None:
+        if self._results_window is not None:
+            self._results_window._reload()
+            self._results_window.raise_()
+            self._results_window.activateWindow()
+            return
+        self._results_window = ResultsWindow(
+            self._current_db_path,
+            competition_name=self._current_competition_name,
+            parent=None,
+        )
+        self._results_window.destroyed.connect(
+            lambda: setattr(self, "_results_window", None)
+        )
+        self._results_window.show()
+
+    def _on_print_results(self) -> None:
+        if self._current_db_path is None:
+            return
+        try:
+            engine = RankingEngine(self._current_db_path)
+            ranked = engine.compute()
+        except Exception as exc:
+            QMessageBox.critical(self, self.tr("エラー"), str(exc))
+            return
+        if not ranked:
+            QMessageBox.information(
+                self, self.tr("結果印刷"),
+                self.tr("印刷するデータがありません。"),
+            )
+            return
+        # Delegate print to a temporary ResultsWindow (not shown)
+        win = ResultsWindow(
+            self._current_db_path,
+            competition_name=self._current_competition_name,
+            parent=self,
+        )
+        win._on_print()
+
+    def _on_export_results(self) -> None:
+        if self._current_db_path is None:
+            return
+        try:
+            engine = RankingEngine(self._current_db_path)
+            ranked = engine.compute()
+        except Exception as exc:
+            QMessageBox.critical(self, self.tr("エラー"), str(exc))
+            return
+        if not ranked:
+            QMessageBox.information(
+                self, self.tr("結果を出力"),
+                self.tr("出力するデータがありません。"),
+            )
+            return
+        out_dir = QFileDialog.getExistingDirectory(
+            self,
+            self.tr("CSV出力フォルダを選択"),
+            str(Path.home()),
+        )
+        if not out_dir:
+            return
+        try:
+            files = export_all(ranked, Path(out_dir))
+        except Exception as exc:
+            QMessageBox.critical(
+                self, self.tr("出力エラー"),
+                self.tr("CSV出力に失敗しました:\n") + str(exc),
+            )
+            return
+        names = "\n".join(Path(f).name for f in files)
+        QMessageBox.information(
+            self, self.tr("CSV出力完了"),
+            self.tr("以下のファイルを出力しました:\n\n") + names
+            + "\n\n" + self.tr("保存先: ") + out_dir,
+        )
 
     def _on_about(self):
         QMessageBox.about(
