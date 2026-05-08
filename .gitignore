@@ -29,10 +29,11 @@ ENV/
 .venv/
 venv/
 
-# SQLite
+# SQLite / competition files
 *.db
 *.sqlite
 *.sqlite3
+*.ardf
 
 # Logs
 *.log

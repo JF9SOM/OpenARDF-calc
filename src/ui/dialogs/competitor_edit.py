@@ -5,10 +5,12 @@ from typing import Optional
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFormLayout,
     QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -21,6 +23,7 @@ from PySide6.QtWidgets import (
 from core.competitor_dao import CompetitorDAO
 
 _CLASSES = ["", "W19", "W21", "W35", "W50", "M19", "M21", "M40", "M50", "M60"]
+_DSQ_REASONS = ["", "棄権", "タイムオーバー", "その他"]
 
 
 class CompetitorEditDialog(QDialog):
@@ -146,6 +149,26 @@ class CompetitorEditDialog(QDialog):
 
         root.addLayout(form)
 
+        # ── 競技状態（棄権・失格） ──────────────────────────
+        self._status_group = QGroupBox()
+        status_layout = QVBoxLayout(self._status_group)
+        status_layout.setSpacing(6)
+
+        self._chk_absent = QCheckBox()
+        status_layout.addWidget(self._chk_absent)
+
+        dsq_row = QHBoxLayout()
+        self._lbl_dsq_reason = QLabel()
+        self._dsq_combo = QComboBox()
+        self._dsq_combo.addItems(_DSQ_REASONS)
+        self._dsq_combo.setFixedWidth(140)
+        dsq_row.addWidget(self._lbl_dsq_reason)
+        dsq_row.addWidget(self._dsq_combo)
+        dsq_row.addStretch()
+        status_layout.addLayout(dsq_row)
+
+        root.addWidget(self._status_group)
+
         # ── フッター（ボタンエリア） ──────────────────────────
         self._footer_frame = QFrame()
         self._footer_frame.setObjectName("dlgFooter")
@@ -189,6 +212,10 @@ class CompetitorEditDialog(QDialog):
         self._lbl_group.setText(self.tr("グループ名"))
         self._lbl_address.setText(self.tr("住所"))
 
+        self._status_group.setTitle(self.tr("競技状態"))
+        self._chk_absent.setText(self.tr("欠席"))
+        self._lbl_dsq_reason.setText(self.tr("棄権・失格理由:"))
+
         self._btn_save.setText(self.tr("保存"))
         self._btn_cancel.setText(self.tr("キャンセル"))
 
@@ -216,6 +243,10 @@ class CompetitorEditDialog(QDialog):
         self._start_order_spin.setValue(data.get("start_order") or 0)
         self._group_edit.setText(data.get("group_name") or "")
         self._address_edit.setText(data.get("address1") or "")
+        self._chk_absent.setChecked(bool(data.get("absent", 0)))
+        reason = data.get("disqualification_reason") or ""
+        idx = self._dsq_combo.findText(reason)
+        self._dsq_combo.setCurrentIndex(max(0, idx))
 
     # ------------------------------------------------------------------
     # Save
@@ -263,16 +294,20 @@ class CompetitorEditDialog(QDialog):
             )
             return
 
+        dsq_reason = self._dsq_combo.currentText()
         data = {
-            "bib_number":  bib,
-            "call_sign":   callsign,
-            "name":        name,
-            "si_number":   si or None,
-            "class_name":  self._class_combo.currentText() or None,
-            "division":    self._division_edit.text().strip() or None,
-            "start_order": self._start_order_spin.value() or None,
-            "group_name":  self._group_edit.text().strip() or None,
-            "address1":    self._address_edit.text().strip() or None,
+            "bib_number":              bib,
+            "call_sign":               callsign,
+            "name":                    name,
+            "si_number":               si or None,
+            "class_name":              self._class_combo.currentText() or None,
+            "division":                self._division_edit.text().strip() or None,
+            "start_order":             self._start_order_spin.value() or None,
+            "group_name":              self._group_edit.text().strip() or None,
+            "address1":                self._address_edit.text().strip() or None,
+            "absent":                  int(self._chk_absent.isChecked()),
+            "disqualified":            1 if dsq_reason else 0,
+            "disqualification_reason": dsq_reason or None,
         }
 
         if self._competitor_id is None:

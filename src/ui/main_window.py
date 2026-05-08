@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 from typing import Optional
 
@@ -6,6 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -16,8 +18,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from core.competitor_dao import CompetitorDAO
 from ui.competitors_window import CompetitorsWindow
+from ui.dialogs.absence_dialog import AbsenceDialog
 from ui.dialogs.competition_settings import CompetitionSettingsDialog
+from ui.dialogs.si_import_dialog import SIImportDialog
 
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
 
@@ -52,15 +57,18 @@ class MainWindow(QMainWindow):
         self._action_new = QAction(self)
         self._action_open = QAction(self)
         self._action_import_csv = QAction(self)
+        self._action_import_csv.setEnabled(False)
 
         self._menu_si = self._menu_file.addMenu("")
         self._action_import_si_manager = QAction(self)
+        self._action_import_si_manager.setEnabled(False)
         self._action_import_si_direct = QAction(self)
         self._action_import_si_direct.setEnabled(False)
         self._menu_si.addAction(self._action_import_si_manager)
         self._menu_si.addAction(self._action_import_si_direct)
 
         self._action_export = QAction(self)
+        self._action_export.setEnabled(False)
         self._action_exit = QAction(self)
 
         self._menu_file.addAction(self._action_new)
@@ -76,6 +84,7 @@ class MainWindow(QMainWindow):
         # --- Competition ---
         self._menu_competition = mb.addMenu("")
         self._action_comp_settings = QAction(self)
+        self._action_comp_settings.setEnabled(False)
         self._action_competitors = QAction(self)
         self._action_absences = QAction(self)
         self._menu_competition.addAction(self._action_comp_settings)
@@ -103,8 +112,13 @@ class MainWindow(QMainWindow):
 
         # Connections
         self._action_new.triggered.connect(self._on_new_competition)
+        self._action_open.triggered.connect(self._on_open_competition)
+        self._action_import_csv.triggered.connect(self._on_import_participant_csv)
+        self._action_import_si_manager.triggered.connect(self._on_import_si_manager)
         self._action_exit.triggered.connect(self.close)
+        self._action_comp_settings.triggered.connect(self._on_comp_settings)
         self._action_competitors.triggered.connect(self._on_competitors)
+        self._action_absences.triggered.connect(self._on_absences)
         self._action_about.triggered.connect(self._on_about)
 
     # ------------------------------------------------------------------
@@ -253,16 +267,21 @@ class MainWindow(QMainWindow):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._set_current_competition(dlg.competition_name, dlg.db_path)
 
-    def _set_current_competition(self, name: str, db_path: Path) -> None:
+    def _set_current_competition(self, name: str, db_path: Path, opened: bool = False) -> None:
         self._current_competition_name = name
         self._current_db_path = db_path
         base_title = self.tr("OpenARDF-calc - ARDF競技集計ソフト")
         self.setWindowTitle(f"{name} — {base_title}")
         self._label_welcome.setText(self.tr("開催中の大会: ") + name)
-        self._status_bar.showMessage(self.tr("大会を作成しました: ") + name)
+        msg = self.tr("大会を開きました: ") if opened else self.tr("大会を作成しました: ")
+        self._status_bar.showMessage(msg + name)
         # Enable competition-specific menu actions
         self._action_competitors.setEnabled(True)
         self._action_absences.setEnabled(True)
+        self._action_import_csv.setEnabled(True)
+        self._action_import_si_manager.setEnabled(True)
+        self._action_export.setEnabled(True)
+        self._action_comp_settings.setEnabled(True)
 
     def _on_competitors(self) -> None:
         if self._current_db_path is None:
@@ -281,6 +300,109 @@ class MainWindow(QMainWindow):
             lambda: setattr(self, "_competitors_window", None)
         )
         self._competitors_window.show()
+
+    def _on_open_competition(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("大会ファイルを開く"),
+            str(Path.home()),
+            self.tr("大会ファイル (*.ardf);;すべてのファイル (*)"),
+        )
+        if not path:
+            return
+        db_path = Path(path)
+        try:
+            conn = sqlite3.connect(str(db_path))
+            row = conn.execute("SELECT name FROM competition LIMIT 1").fetchone()
+            conn.close()
+        except Exception as exc:
+            QMessageBox.critical(
+                self, self.tr("エラー"),
+                self.tr("大会ファイルを開けませんでした:\n") + str(exc),
+            )
+            return
+        if row is None:
+            QMessageBox.warning(
+                self, self.tr("エラー"),
+                self.tr("有効な大会ファイルではありません。"),
+            )
+            return
+        self._set_current_competition(row[0], db_path, opened=True)
+
+    def _on_import_participant_csv(self) -> None:
+        if self._current_db_path is None:
+            QMessageBox.information(
+                self, self.tr("CSV読み込み"),
+                self.tr("先に大会を作成または開いてください。"),
+            )
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("参加者CSVを開く"),
+            str(Path.home()),
+            self.tr("CSV ファイル (*.csv);;すべてのファイル (*)"),
+        )
+        if not path:
+            return
+        dao = CompetitorDAO(self._current_db_path)
+        imported, errors = dao.import_csv(Path(path))
+        msg = self.tr("読み込み完了: ") + str(imported) + self.tr(" 件")
+        if errors:
+            shown = errors[:10]
+            msg += "\n\n" + self.tr("以下のエラーが発生しました:\n") + "\n".join(shown)
+            if len(errors) > 10:
+                msg += f"\n... 他 {len(errors) - 10} 件"
+            QMessageBox.warning(self, self.tr("CSV読み込み"), msg)
+        else:
+            QMessageBox.information(self, self.tr("CSV読み込み"), msg)
+
+    def _on_import_si_manager(self) -> None:
+        if self._current_db_path is None:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("SI Manager CSV を選択"),
+            str(Path.home()),
+            self.tr("CSV ファイル (*.csv);;すべてのファイル (*)"),
+        )
+        if not path:
+            return
+        dlg = SIImportDialog(self._current_db_path, parent=self)
+        dlg._run_import(Path(path))
+        dlg.exec()
+
+    def _on_comp_settings(self) -> None:
+        if self._current_db_path is None:
+            QMessageBox.information(
+                self, self.tr("競技設定"),
+                self.tr("先に大会を作成または開いてください。"),
+            )
+            return
+        try:
+            conn = sqlite3.connect(str(self._current_db_path))
+            row = conn.execute("SELECT * FROM competition LIMIT 1").fetchone()
+            conn.close()
+        except Exception:
+            return
+        if row is None:
+            return
+        keys = [
+            "name", "date", "start_time_g1", "si_base_time",
+            "group_score_count",
+        ]
+        info = "\n".join(
+            f"{k}: {row[k]}" for k in keys if row[k] is not None
+        )
+        QMessageBox.information(
+            self, self.tr("競技設定"),
+            self.tr("現在の大会設定:\n\n") + info,
+        )
+
+    def _on_absences(self) -> None:
+        if self._current_db_path is None:
+            return
+        dlg = AbsenceDialog(self._current_db_path, parent=self)
+        dlg.exec()
 
     def _on_about(self):
         QMessageBox.about(

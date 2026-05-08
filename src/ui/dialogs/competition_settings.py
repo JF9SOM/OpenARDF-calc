@@ -379,5 +379,24 @@ def _create_tables(conn: sqlite3.Connection) -> None:
             control_code    TEXT,
             punch_time      TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS results (
+            id               INTEGER PRIMARY KEY,
+            competitor_id    INTEGER UNIQUE NOT NULL REFERENCES competitor(id) ON DELETE CASCADE,
+            finish_time      TEXT,
+            elapsed_seconds  INTEGER,
+            punched_tx_count INTEGER NOT NULL DEFAULT 0,
+            overtime         INTEGER NOT NULL DEFAULT 0,
+            raw_status       TEXT,
+            imported_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS tx_punches (
+            id            INTEGER PRIMARY KEY,
+            competitor_id INTEGER NOT NULL REFERENCES competitor(id) ON DELETE CASCADE,
+            tx_number     INTEGER NOT NULL,
+            punch_time    TEXT,
+            UNIQUE(competitor_id, tx_number)
+        );
         """
     )
