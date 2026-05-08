@@ -9,6 +9,10 @@ from pathlib import Path
 
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "src" / "translations"
 
+# Prefer pyside6-lrelease from the same Python environment as this script
+_LRELEASE = Path(sys.executable).parent / "pyside6-lrelease"
+LRELEASE_CMD = str(_LRELEASE) if _LRELEASE.exists() else "pyside6-lrelease"
+
 
 def build():
     ts_files = sorted(TRANSLATIONS_DIR.glob("*.ts"))
@@ -20,7 +24,7 @@ def build():
     for ts_file in ts_files:
         qm_file = ts_file.with_suffix(".qm")
         result = subprocess.run(
-            ["pyside6-lrelease", str(ts_file), "-qm", str(qm_file)],
+            [LRELEASE_CMD, str(ts_file), "-qm", str(qm_file)],
             capture_output=True,
             text=True,
         )
