@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDateEdit,
     QDialog,
+    QFileDialog,
     QFormLayout,
     QGridLayout,
     QGroupBox,
@@ -27,16 +28,16 @@ from PySide6.QtWidgets import (
 class CompetitionSettingsDialog(QDialog):
     """競技内容設定ダイアログ。
 
-    保存時に db_path へ SQLite ファイルを作成して設定を書き込む。
-    既存ファイルがある場合は上書き（QFileDialog で確認済み前提）。
+    「保存」ボタン押下時にファイル保存ダイアログを開き、
+    選択した場所に .ardf SQLite ファイルを作成して設定を書き込む。
     """
 
     _CLASSES = ("W19", "W21", "W35", "W50", "M19", "M21", "M40", "M50", "M60")
     _DEFAULT_WINNERS: dict[str, int] = {"M60": 2}
 
-    def __init__(self, db_path: Path, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._db_path = db_path
+        self._db_path: Optional[Path] = None
         self._competition_id: Optional[int] = None
         self._setup_ui()
         self._retranslate_ui()
@@ -44,6 +45,10 @@ class CompetitionSettingsDialog(QDialog):
     # ------------------------------------------------------------------
     # Public properties
     # ------------------------------------------------------------------
+
+    @property
+    def db_path(self) -> Optional[Path]:
+        return self._db_path
 
     @property
     def competition_id(self) -> Optional[int]:
@@ -198,11 +203,24 @@ class CompetitionSettingsDialog(QDialog):
             self._name_edit.setFocus()
             return
 
-        if self._db_path.exists():
-            self._db_path.unlink()
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("大会ファイルの保存先を選択"),
+            str(Path.home()),
+            self.tr("大会ファイル (*.ardf);;すべてのファイル (*)"),
+        )
+        if not path:
+            return  # ファイルダイアログをキャンセル → 設定ダイアログは閉じない
+
+        db_path = Path(path)
+        if not db_path.suffix:
+            db_path = db_path.with_suffix(".ardf")
+
+        if db_path.exists():
+            db_path.unlink()
 
         try:
-            conn = sqlite3.connect(str(self._db_path))
+            conn = sqlite3.connect(str(db_path))
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA foreign_keys=ON")
             _create_tables(conn)
@@ -236,6 +254,7 @@ class CompetitionSettingsDialog(QDialog):
             )
             conn.commit()
             self._competition_id = cur.lastrowid
+            self._db_path = db_path
         except Exception as exc:
             QMessageBox.critical(
                 self,

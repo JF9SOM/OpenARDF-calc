@@ -6,7 +6,6 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -244,22 +243,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_new_competition(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            self.tr("新規大会ファイルの作成"),
-            str(Path.home()),
-            self.tr("大会ファイル (*.ardf);;すべてのファイル (*)"),
-        )
-        if not path:
-            return
-
-        db_path = Path(path)
-        if not db_path.suffix:
-            db_path = db_path.with_suffix(".ardf")
-
-        dlg = CompetitionSettingsDialog(db_path, self)
+        dlg = CompetitionSettingsDialog(self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
-            self._set_current_competition(dlg.competition_name, db_path)
+            self._set_current_competition(dlg.competition_name, dlg.db_path)
 
     def _set_current_competition(self, name: str, db_path: Path) -> None:
         self._current_competition_name = name

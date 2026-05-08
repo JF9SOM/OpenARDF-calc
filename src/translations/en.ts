@@ -120,14 +120,6 @@ License: MIT
 Author: JF9SOM</translation>
     </message>
     <message>
-        <source>新規大会ファイルの作成</source>
-        <translation>Create New Competition File</translation>
-    </message>
-    <message>
-        <source>大会ファイル (*.ardf);;すべてのファイル (*)</source>
-        <translation>Competition File (*.ardf);;All Files (*)</translation>
-    </message>
-    <message>
         <source>大会を作成しました: </source>
         <translation>Competition created: </translation>
     </message>
@@ -181,6 +173,14 @@ Author: JF9SOM</translation>
     <message>
         <source>入賞者数（クラス別）</source>
         <translation>Winners Count (by Class)</translation>
+    </message>
+    <message>
+        <source>大会ファイルの保存先を選択</source>
+        <translation>Select Save Location for Competition File</translation>
+    </message>
+    <message>
+        <source>大会ファイル (*.ardf);;すべてのファイル (*)</source>
+        <translation>Competition File (*.ardf);;All Files (*)</translation>
     </message>
     <message>
         <source>保存</source>
