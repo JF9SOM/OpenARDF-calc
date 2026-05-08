@@ -5,13 +5,14 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import QDate, QEvent, QTime, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import (
     QCheckBox,
     QDateEdit,
     QDialog,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -37,6 +38,30 @@ class CompetitionSettingsDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowSystemMenuHint
+            | Qt.WindowType.WindowCloseButtonHint
+        )
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor("#E8EEF4"))
+        self.setPalette(pal)
+        self.setAutoFillBackground(True)
+        self.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #b0c4d8;
+                border-radius: 4px;
+                margin-top: 16px;
+                padding-top: 6px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 8px;
+                padding: 0 4px;
+            }
+        """)
         self._db_path: Optional[Path] = None
         self._competition_id: Optional[int] = None
         self._setup_ui()
@@ -64,9 +89,30 @@ class CompetitionSettingsDialog(QDialog):
 
     def _setup_ui(self) -> None:
         self.setMinimumWidth(560)
-        root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setSpacing(0)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        # ── カスタムタイトルバー ──────────────────────────────
+        self._header_frame = QFrame()
+        self._header_frame.setObjectName("dlgHeader")
+        self._header_frame.setFixedHeight(36)
+        self._header_frame.setStyleSheet(
+            "QFrame#dlgHeader { background-color: #4a6fa0; border: none; }"
+        )
+        hdr_layout = QHBoxLayout(self._header_frame)
+        hdr_layout.setContentsMargins(12, 0, 12, 0)
+        self._header_label = QLabel()
+        self._header_label.setStyleSheet(
+            "color: white; font-weight: bold; background: transparent; border: none;"
+        )
+        hdr_layout.addWidget(self._header_label)
+        outer.addWidget(self._header_frame)
+
+        root = QVBoxLayout()
         root.setSpacing(10)
         root.setContentsMargins(16, 12, 16, 12)
+        outer.addLayout(root)
 
         # ── 基本設定フォーム ──────────────────────────────────
         form = QFormLayout()
@@ -146,9 +192,16 @@ class CompetitionSettingsDialog(QDialog):
 
         root.addWidget(self._winners_group)
 
-        # ── ボタン ────────────────────────────────────────────
-        btn_h = QHBoxLayout()
-        btn_h.addStretch()
+        # ── フッター（ボタンエリア） ──────────────────────────
+        self._footer_frame = QFrame()
+        self._footer_frame.setObjectName("dlgFooter")
+        self._footer_frame.setStyleSheet(
+            "QFrame#dlgFooter { background-color: #D0DCE8; border: none;"
+            " border-top: 1px solid #b0c4d8; }"
+        )
+        footer_layout = QHBoxLayout(self._footer_frame)
+        footer_layout.setContentsMargins(12, 8, 12, 8)
+        footer_layout.addStretch()
         self._btn_save = QPushButton()
         self._btn_save.setDefault(True)
         self._btn_save.setMinimumWidth(80)
@@ -156,16 +209,17 @@ class CompetitionSettingsDialog(QDialog):
         self._btn_cancel.setMinimumWidth(80)
         self._btn_save.clicked.connect(self._on_save)
         self._btn_cancel.clicked.connect(self.reject)
-        btn_h.addWidget(self._btn_save)
-        btn_h.addWidget(self._btn_cancel)
-        root.addLayout(btn_h)
+        footer_layout.addWidget(self._btn_save)
+        footer_layout.addWidget(self._btn_cancel)
+        outer.addWidget(self._footer_frame)
 
     # ------------------------------------------------------------------
     # Retranslation
     # ------------------------------------------------------------------
 
     def _retranslate_ui(self) -> None:
-        self.setWindowTitle(self.tr("競技設定"))
+        self.setWindowTitle(self.tr("新規大会の設定"))
+        self._header_label.setText(self.tr("新規大会の設定"))
 
         self._lbl_name.setText(self.tr("大会名称"))
         self._lbl_date.setText(self.tr("開催年月日"))

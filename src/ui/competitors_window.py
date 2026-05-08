@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QColor, QPalette
 from PySide6.QtWidgets import (
     QFileDialog,
     QHeaderView,
@@ -44,6 +44,9 @@ class CompetitorsWindow(QMainWindow):
         parent=None,
     ):
         super().__init__(parent)
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor("#E8EEF4"))
+        self.setPalette(pal)
         self._dao = CompetitorDAO(db_path)
         self._competition_name = competition_name
         self._setup_ui()
@@ -60,6 +63,26 @@ class CompetitorsWindow(QMainWindow):
         # Toolbar
         tb = QToolBar()
         tb.setMovable(False)
+        tb.setStyleSheet("""
+            QToolBar {
+                background-color: #E8EEF4;
+                border-bottom: 1px solid #b0c4d8;
+                spacing: 4px;
+                padding: 2px;
+            }
+            QToolButton {
+                border: 1px solid transparent;
+                border-radius: 3px;
+                padding: 3px 8px;
+            }
+            QToolButton:hover {
+                background-color: #d0dce8;
+                border-color: #b0c4d8;
+            }
+            QToolButton:pressed {
+                background-color: #b8ccd8;
+            }
+        """)
         self.addToolBar(tb)
 
         self._action_add = QAction(self)
@@ -85,16 +108,36 @@ class CompetitorsWindow(QMainWindow):
         self._table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSortingEnabled(True)
+        self._table.setAlternatingRowColors(True)
         self._table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.verticalHeader().setVisible(False)
         self._table.doubleClicked.connect(self._on_double_clicked)
+        self._table.setStyleSheet("""
+            QTableWidget {
+                background-color: #ffffff;
+                alternate-background-color: #f0f5fa;
+                gridline-color: #d0dce8;
+                border: none;
+            }
+            QHeaderView::section {
+                background-color: #dce6f0;
+                border: none;
+                border-right: 1px solid #b0c4d8;
+                border-bottom: 1px solid #b0c4d8;
+                padding: 4px 8px;
+                font-weight: bold;
+            }
+        """)
         self.setCentralWidget(self._table)
 
         # Status bar with count
         self._status_bar = QStatusBar()
+        self._status_bar.setStyleSheet(
+            "QStatusBar { background-color: #D0DCE8; border-top: 1px solid #b0c4d8; }"
+        )
         self._count_label = QLabel()
         self._status_bar.addPermanentWidget(self._count_label)
         self.setStatusBar(self._status_bar)
@@ -155,7 +198,7 @@ class CompetitorsWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_add(self) -> None:
-        dlg = CompetitorEditDialog(self._dao, parent=self)
+        dlg = CompetitorEditDialog(self._dao)
         if dlg.exec():
             self._load_table()
 
@@ -164,7 +207,7 @@ class CompetitorsWindow(QMainWindow):
         if item is None:
             return
         competitor_id = item.data(Qt.ItemDataRole.UserRole)
-        dlg = CompetitorEditDialog(self._dao, competitor_id=competitor_id, parent=self)
+        dlg = CompetitorEditDialog(self._dao, competitor_id=competitor_id)
         if dlg.exec():
             self._load_table()
 

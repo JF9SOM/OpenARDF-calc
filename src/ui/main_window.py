@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_new_competition(self):
-        dlg = CompetitionSettingsDialog(self)
+        dlg = CompetitionSettingsDialog()
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._set_current_competition(dlg.competition_name, dlg.db_path)
 

@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -34,6 +36,17 @@ class CompetitorEditDialog(QDialog):
         parent=None,
     ):
         super().__init__(parent)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowSystemMenuHint
+            | Qt.WindowType.WindowCloseButtonHint
+        )
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor("#E8EEF4"))
+        self.setPalette(pal)
+        self.setAutoFillBackground(True)
         self._dao = dao
         self._competitor_id = competitor_id
         self._setup_ui()
@@ -47,9 +60,30 @@ class CompetitorEditDialog(QDialog):
 
     def _setup_ui(self) -> None:
         self.setMinimumWidth(400)
-        root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setSpacing(0)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        # ── カスタムタイトルバー ──────────────────────────────
+        self._header_frame = QFrame()
+        self._header_frame.setObjectName("dlgHeader")
+        self._header_frame.setFixedHeight(36)
+        self._header_frame.setStyleSheet(
+            "QFrame#dlgHeader { background-color: #4a6fa0; border: none; }"
+        )
+        hdr_layout = QHBoxLayout(self._header_frame)
+        hdr_layout.setContentsMargins(12, 0, 12, 0)
+        self._header_label = QLabel()
+        self._header_label.setStyleSheet(
+            "color: white; font-weight: bold; background: transparent; border: none;"
+        )
+        hdr_layout.addWidget(self._header_label)
+        outer.addWidget(self._header_frame)
+
+        root = QVBoxLayout()
         root.setSpacing(10)
         root.setContentsMargins(16, 12, 16, 12)
+        outer.addLayout(root)
 
         form = QFormLayout()
         form.setLabelAlignment(
@@ -112,8 +146,16 @@ class CompetitorEditDialog(QDialog):
 
         root.addLayout(form)
 
-        btn_h = QHBoxLayout()
-        btn_h.addStretch()
+        # ── フッター（ボタンエリア） ──────────────────────────
+        self._footer_frame = QFrame()
+        self._footer_frame.setObjectName("dlgFooter")
+        self._footer_frame.setStyleSheet(
+            "QFrame#dlgFooter { background-color: #D0DCE8; border: none;"
+            " border-top: 1px solid #b0c4d8; }"
+        )
+        footer_layout = QHBoxLayout(self._footer_frame)
+        footer_layout.setContentsMargins(12, 8, 12, 8)
+        footer_layout.addStretch()
         self._btn_save = QPushButton()
         self._btn_save.setDefault(True)
         self._btn_save.setMinimumWidth(80)
@@ -121,9 +163,9 @@ class CompetitorEditDialog(QDialog):
         self._btn_cancel.setMinimumWidth(80)
         self._btn_save.clicked.connect(self._on_save)
         self._btn_cancel.clicked.connect(self.reject)
-        btn_h.addWidget(self._btn_save)
-        btn_h.addWidget(self._btn_cancel)
-        root.addLayout(btn_h)
+        footer_layout.addWidget(self._btn_save)
+        footer_layout.addWidget(self._btn_cancel)
+        outer.addWidget(self._footer_frame)
 
     # ------------------------------------------------------------------
     # Retranslation
@@ -131,9 +173,11 @@ class CompetitorEditDialog(QDialog):
 
     def _retranslate_ui(self) -> None:
         if self._competitor_id is None:
-            self.setWindowTitle(self.tr("参加者追加"))
+            self.setWindowTitle(self.tr("参加者の追加"))
+            self._header_label.setText(self.tr("参加者の追加"))
         else:
-            self.setWindowTitle(self.tr("参加者編集"))
+            self.setWindowTitle(self.tr("参加者の編集"))
+            self._header_label.setText(self.tr("参加者の編集"))
 
         self._lbl_bib.setText(self.tr("ゼッケン ★"))
         self._lbl_callsign.setText(self.tr("コールサイン ★"))
