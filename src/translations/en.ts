@@ -207,4 +207,210 @@ Author: JF9SOM</translation>
         <translation>An error occurred while saving:\n</translation>
     </message>
 </context>
+<context>
+    <name>CompetitorsWindow</name>
+    <message>
+        <source>参加者管理</source>
+        <translation>Competitor Management</translation>
+    </message>
+    <message>
+        <source>追加</source>
+        <translation>Add</translation>
+    </message>
+    <message>
+        <source>削除</source>
+        <translation>Delete</translation>
+    </message>
+    <message>
+        <source>CSV読み込み</source>
+        <translation>Import CSV</translation>
+    </message>
+    <message>
+        <source>CSV書き出し</source>
+        <translation>Export CSV</translation>
+    </message>
+    <message>
+        <source>ゼッケン</source>
+        <translation>Bib No.</translation>
+    </message>
+    <message>
+        <source>コールサイン</source>
+        <translation>Call Sign</translation>
+    </message>
+    <message>
+        <source>氏名</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>SIカードNo</source>
+        <translation>SI Card No</translation>
+    </message>
+    <message>
+        <source>クラス</source>
+        <translation>Class</translation>
+    </message>
+    <message>
+        <source>区分</source>
+        <translation>Division</translation>
+    </message>
+    <message>
+        <source>スタート順</source>
+        <translation>Start Order</translation>
+    </message>
+    <message>
+        <source>グループ名</source>
+        <translation>Group</translation>
+    </message>
+    <message>
+        <source>住所</source>
+        <translation>Address</translation>
+    </message>
+    <message>
+        <source>登録数: </source>
+        <translation>Total: </translation>
+    </message>
+    <message>
+        <source> 名</source>
+        <translation> competitor(s)</translation>
+    </message>
+    <message>
+        <source>削除する参加者を選択してください。</source>
+        <translation>Please select a competitor to delete.</translation>
+    </message>
+    <message>
+        <source>削除の確認</source>
+        <translation>Confirm Deletion</translation>
+    </message>
+    <message>
+        <source>以下の参加者を削除しますか？\n\n</source>
+        <translation>Delete this competitor?\n\n</translation>
+    </message>
+    <message>
+        <source>参加者CSVを開く</source>
+        <translation>Open Competitor CSV</translation>
+    </message>
+    <message>
+        <source>CSV ファイル (*.csv);;すべてのファイル (*)</source>
+        <translation>CSV Files (*.csv);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>読み込み完了: </source>
+        <translation>Imported: </translation>
+    </message>
+    <message>
+        <source> 件</source>
+        <translation> record(s)</translation>
+    </message>
+    <message>
+        <source>以下のエラーが発生しました:\n</source>
+        <translation>The following errors occurred:\n</translation>
+    </message>
+    <message>
+        <source>CSV読み込み</source>
+        <translation>Import CSV</translation>
+    </message>
+    <message>
+        <source>参加者CSVを保存</source>
+        <translation>Save Competitor CSV</translation>
+    </message>
+    <message>
+        <source>CSV書き出し</source>
+        <translation>Export CSV</translation>
+    </message>
+    <message>
+        <source>書き出し完了: </source>
+        <translation>Exported: </translation>
+    </message>
+</context>
+<context>
+    <name>CompetitorEditDialog</name>
+    <message>
+        <source>参加者追加</source>
+        <translation>Add Competitor</translation>
+    </message>
+    <message>
+        <source>参加者編集</source>
+        <translation>Edit Competitor</translation>
+    </message>
+    <message>
+        <source>ゼッケン ★</source>
+        <translation>Bib No. ★</translation>
+    </message>
+    <message>
+        <source>コールサイン ★</source>
+        <translation>Call Sign ★</translation>
+    </message>
+    <message>
+        <source>氏名 ★</source>
+        <translation>Name ★</translation>
+    </message>
+    <message>
+        <source>SIカードNo</source>
+        <translation>SI Card No</translation>
+    </message>
+    <message>
+        <source>クラス</source>
+        <translation>Class</translation>
+    </message>
+    <message>
+        <source>区分</source>
+        <translation>Division</translation>
+    </message>
+    <message>
+        <source>スタート順</source>
+        <translation>Start Order</translation>
+    </message>
+    <message>
+        <source>グループ名</source>
+        <translation>Group</translation>
+    </message>
+    <message>
+        <source>住所</source>
+        <translation>Address</translation>
+    </message>
+    <message>
+        <source>保存</source>
+        <translation>Save</translation>
+    </message>
+    <message>
+        <source>キャンセル</source>
+        <translation>Cancel</translation>
+    </message>
+    <message>
+        <source>入力エラー</source>
+        <translation>Input Error</translation>
+    </message>
+    <message>
+        <source>ゼッケン番号を入力してください。</source>
+        <translation>Please enter the bib number.</translation>
+    </message>
+    <message>
+        <source>コールサインを入力してください。</source>
+        <translation>Please enter the call sign.</translation>
+    </message>
+    <message>
+        <source>氏名を入力してください。</source>
+        <translation>Please enter the name.</translation>
+    </message>
+    <message>
+        <source>重複エラー</source>
+        <translation>Duplicate Error</translation>
+    </message>
+    <message>
+        <source>ゼッケン番号 </source>
+        <translation>Bib number </translation>
+    </message>
+    <message>
+        <source>コールサイン </source>
+        <translation>Call sign </translation>
+    </message>
+    <message>
+        <source>SIカードNo </source>
+        <translation>SI card no. </translation>
+    </message>
+    <message>
+        <source> は既に使用されています。</source>
+        <translation> is already in use.</translation>
+    </message>
+</context>
 </TS>

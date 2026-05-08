@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui.competitors_window import CompetitorsWindow
 from ui.dialogs.competition_settings import CompetitionSettingsDialog
 
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
@@ -28,6 +29,7 @@ class MainWindow(QMainWindow):
         self._current_lang = "ja"
         self._current_competition_name: str = ""
         self._current_db_path: Optional[Path] = None
+        self._competitors_window: Optional[CompetitorsWindow] = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -79,6 +81,9 @@ class MainWindow(QMainWindow):
         self._menu_competition.addAction(self._action_comp_settings)
         self._menu_competition.addAction(self._action_competitors)
         self._menu_competition.addAction(self._action_absences)
+        # Disabled until a competition is open
+        self._action_competitors.setEnabled(False)
+        self._action_absences.setEnabled(False)
 
         # --- Results ---
         self._menu_results = mb.addMenu("")
@@ -99,6 +104,7 @@ class MainWindow(QMainWindow):
         # Connections
         self._action_new.triggered.connect(self._on_new_competition)
         self._action_exit.triggered.connect(self.close)
+        self._action_competitors.triggered.connect(self._on_competitors)
         self._action_about.triggered.connect(self._on_about)
 
     # ------------------------------------------------------------------
@@ -254,6 +260,27 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{name} — {base_title}")
         self._label_welcome.setText(self.tr("開催中の大会: ") + name)
         self._status_bar.showMessage(self.tr("大会を作成しました: ") + name)
+        # Enable competition-specific menu actions
+        self._action_competitors.setEnabled(True)
+        self._action_absences.setEnabled(True)
+
+    def _on_competitors(self) -> None:
+        if self._current_db_path is None:
+            return
+        # Bring existing window to front if already open
+        if self._competitors_window is not None:
+            self._competitors_window.raise_()
+            self._competitors_window.activateWindow()
+            return
+        self._competitors_window = CompetitorsWindow(
+            self._current_db_path,
+            competition_name=self._current_competition_name,
+            parent=None,  # independent window
+        )
+        self._competitors_window.destroyed.connect(
+            lambda: setattr(self, "_competitors_window", None)
+        )
+        self._competitors_window.show()
 
     def _on_about(self):
         QMessageBox.about(

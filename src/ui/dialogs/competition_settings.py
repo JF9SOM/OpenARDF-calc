@@ -298,12 +298,25 @@ def _create_tables(conn: sqlite3.Connection) -> None:
         );
 
         CREATE TABLE IF NOT EXISTS competitor (
-            id          INTEGER PRIMARY KEY,
-            si_number   TEXT,
-            call_sign   TEXT,
-            name        TEXT,
-            category    TEXT,
-            absent      INTEGER NOT NULL DEFAULT 0
+            id                      INTEGER PRIMARY KEY,
+            bib_number              TEXT,
+            si_number               TEXT,
+            call_sign               TEXT,
+            name                    TEXT,
+            class_name              TEXT,
+            birthday                TEXT,
+            division                TEXT,
+            start_order             INTEGER,
+            group_name              TEXT,
+            address1                TEXT,
+            address2                TEXT,
+            tel                     TEXT,
+            email                   TEXT,
+            region                  TEXT,
+            prefecture              TEXT,
+            absent                  INTEGER NOT NULL DEFAULT 0,
+            disqualified            INTEGER NOT NULL DEFAULT 0,
+            disqualification_reason TEXT
         );
 
         CREATE TABLE IF NOT EXISTS punch_record (
