@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import QEvent, Qt, QTranslator
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -14,6 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui.dialogs.competition_settings import CompetitionSettingsDialog
+
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
 
 
@@ -22,6 +27,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._translator = QTranslator()
         self._current_lang = "ja"
+        self._current_competition_name: str = ""
+        self._current_db_path: Optional[Path] = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -91,6 +98,7 @@ class MainWindow(QMainWindow):
         self._menu_help.addAction(self._action_manual)
 
         # Connections
+        self._action_new.triggered.connect(self._on_new_competition)
         self._action_exit.triggered.connect(self.close)
         self._action_about.triggered.connect(self._on_about)
 
@@ -122,7 +130,7 @@ class MainWindow(QMainWindow):
         lang_bar.addWidget(self._btn_en)
         root_layout.addLayout(lang_bar)
 
-        # Welcome area
+        # Welcome / current competition area
         self._label_welcome = QLabel()
         self._label_welcome.setAlignment(Qt.AlignmentFlag.AlignCenter)
         font = self._label_welcome.font()
@@ -141,11 +149,15 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self._status_bar)
 
     # ------------------------------------------------------------------
-    # Retranslation — called on startup and on every language change
+    # Retranslation
     # ------------------------------------------------------------------
 
     def _retranslate_ui(self):
-        self.setWindowTitle(self.tr("OpenARDF-calc - ARDF競技集計ソフト"))
+        base_title = self.tr("OpenARDF-calc - ARDF競技集計ソフト")
+        if self._current_competition_name:
+            self.setWindowTitle(f"{self._current_competition_name} — {base_title}")
+        else:
+            self.setWindowTitle(base_title)
 
         self._menu_file.setTitle(self.tr("ファイル"))
         self._action_new.setText(self.tr("新規大会"))
@@ -171,13 +183,20 @@ class MainWindow(QMainWindow):
         self._action_about.setText(self.tr("このソフトについて"))
         self._action_manual.setText(self.tr("マニュアル"))
 
-        self._label_welcome.setText(
-            self.tr(
-                "OpenARDF-calc へようこそ\n\n"
-                "大会を作成するか、既存の大会を開いてください。"
+        if self._current_competition_name:
+            self._label_welcome.setText(
+                self.tr("開催中の大会: ") + self._current_competition_name
             )
-        )
-        self._status_bar.showMessage(self.tr("準備完了"))
+        else:
+            self._label_welcome.setText(
+                self.tr(
+                    "OpenARDF-calc へようこそ\n\n"
+                    "大会を作成するか、既存の大会を開いてください。"
+                )
+            )
+
+        if not self._current_competition_name:
+            self._status_bar.showMessage(self.tr("準備完了"))
 
     def changeEvent(self, event: QEvent):
         if event.type() == QEvent.Type.LanguageChange:
@@ -190,7 +209,6 @@ class MainWindow(QMainWindow):
 
     def _switch_language(self, lang: str):
         if lang == self._current_lang:
-            # Keep button state consistent even if user re-clicks
             self._btn_ja.setChecked(lang == "ja")
             self._btn_en.setChecked(lang == "en")
             return
@@ -224,6 +242,32 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Slots
     # ------------------------------------------------------------------
+
+    def _on_new_competition(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("新規大会ファイルの作成"),
+            str(Path.home()),
+            self.tr("大会ファイル (*.ardf);;すべてのファイル (*)"),
+        )
+        if not path:
+            return
+
+        db_path = Path(path)
+        if not db_path.suffix:
+            db_path = db_path.with_suffix(".ardf")
+
+        dlg = CompetitionSettingsDialog(db_path, self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self._set_current_competition(dlg.competition_name, db_path)
+
+    def _set_current_competition(self, name: str, db_path: Path) -> None:
+        self._current_competition_name = name
+        self._current_db_path = db_path
+        base_title = self.tr("OpenARDF-calc - ARDF競技集計ソフト")
+        self.setWindowTitle(f"{name} — {base_title}")
+        self._label_welcome.setText(self.tr("開催中の大会: ") + name)
+        self._status_bar.showMessage(self.tr("大会を作成しました: ") + name)
 
     def _on_about(self):
         QMessageBox.about(

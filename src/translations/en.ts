@@ -119,5 +119,92 @@ Version: 0.1.0
 License: MIT
 Author: JF9SOM</translation>
     </message>
+    <message>
+        <source>新規大会ファイルの作成</source>
+        <translation>Create New Competition File</translation>
+    </message>
+    <message>
+        <source>大会ファイル (*.ardf);;すべてのファイル (*)</source>
+        <translation>Competition File (*.ardf);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>大会を作成しました: </source>
+        <translation>Competition created: </translation>
+    </message>
+    <message>
+        <source>開催中の大会: </source>
+        <translation>Current competition: </translation>
+    </message>
+</context>
+<context>
+    <name>CompetitionSettingsDialog</name>
+    <message>
+        <source>競技設定</source>
+        <translation>Competition Settings</translation>
+    </message>
+    <message>
+        <source>大会名称</source>
+        <translation>Competition Name</translation>
+    </message>
+    <message>
+        <source>開催年月日</source>
+        <translation>Competition Date</translation>
+    </message>
+    <message>
+        <source>1組スタート時間</source>
+        <translation>Group 1 Start Time</translation>
+    </message>
+    <message>
+        <source>SI基準時間  ★重要★</source>
+        <translation>SI Base Time  ★IMPORTANT★</translation>
+    </message>
+    <message>
+        <source>グループ成績対象人数</source>
+        <translation>Group Score Count</translation>
+    </message>
+    <message>
+        <source>TX探索設定</source>
+        <translation>TX Search Settings</translation>
+    </message>
+    <message>
+        <source>全TX探索する</source>
+        <translation>Search All TX</translation>
+    </message>
+    <message>
+        <source>W50・M60任意探索</source>
+        <translation>W50/M60 Optional Search</translation>
+    </message>
+    <message>
+        <source>ビーコンを探索する</source>
+        <translation>Search Beacon</translation>
+    </message>
+    <message>
+        <source>入賞者数（クラス別）</source>
+        <translation>Winners Count (by Class)</translation>
+    </message>
+    <message>
+        <source>保存</source>
+        <translation>Save</translation>
+    </message>
+    <message>
+        <source>キャンセル</source>
+        <translation>Cancel</translation>
+    </message>
+    <message>
+        <source>入力エラー</source>
+        <translation>Input Error</translation>
+    </message>
+    <message>
+        <source>大会名称を入力してください。</source>
+        <translation>Please enter the competition name.</translation>
+    </message>
+    <message>
+        <source>保存エラー</source>
+        <translation>Save Error</translation>
+    </message>
+    <message>
+        <source>保存中にエラーが発生しました:\n</source>
+        <translation>An error occurred while saving:\n</translation>
+    </message>
 </context>
 </TS>

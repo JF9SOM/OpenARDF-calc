@@ -15,7 +15,7 @@ venv/
 ENV/
 
 # Qt / PySide6
-*.qm
+# *.qm files ARE committed so users don't need pyside6 tools to run the app
 *.pyc
 
 # IDE
