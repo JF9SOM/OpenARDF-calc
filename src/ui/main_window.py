@@ -1,0 +1,239 @@
+from pathlib import Path
+
+from PySide6.QtCore import QEvent, Qt, QTranslator
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QStatusBar,
+    QVBoxLayout,
+    QWidget,
+)
+
+TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self._translator = QTranslator()
+        self._current_lang = "ja"
+        self._setup_ui()
+
+    def _setup_ui(self):
+        self.setMinimumSize(900, 600)
+        self._create_menu_bar()
+        self._create_central_widget()
+        self._create_status_bar()
+        self._retranslate_ui()
+
+    # ------------------------------------------------------------------
+    # Menu bar
+    # ------------------------------------------------------------------
+
+    def _create_menu_bar(self):
+        mb = self.menuBar()
+
+        # --- File ---
+        self._menu_file = mb.addMenu("")
+
+        self._action_new = QAction(self)
+        self._action_open = QAction(self)
+        self._action_import_csv = QAction(self)
+
+        self._menu_si = self._menu_file.addMenu("")
+        self._action_import_si_manager = QAction(self)
+        self._action_import_si_direct = QAction(self)
+        self._action_import_si_direct.setEnabled(False)
+        self._menu_si.addAction(self._action_import_si_manager)
+        self._menu_si.addAction(self._action_import_si_direct)
+
+        self._action_export = QAction(self)
+        self._action_exit = QAction(self)
+
+        self._menu_file.addAction(self._action_new)
+        self._menu_file.addAction(self._action_open)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_import_csv)
+        self._menu_file.addMenu(self._menu_si)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_export)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_exit)
+
+        # --- Competition ---
+        self._menu_competition = mb.addMenu("")
+        self._action_comp_settings = QAction(self)
+        self._action_competitors = QAction(self)
+        self._action_absences = QAction(self)
+        self._menu_competition.addAction(self._action_comp_settings)
+        self._menu_competition.addAction(self._action_competitors)
+        self._menu_competition.addAction(self._action_absences)
+
+        # --- Results ---
+        self._menu_results = mb.addMenu("")
+        self._action_calc_rankings = QAction(self)
+        self._action_view_results = QAction(self)
+        self._action_print_results = QAction(self)
+        self._menu_results.addAction(self._action_calc_rankings)
+        self._menu_results.addAction(self._action_view_results)
+        self._menu_results.addAction(self._action_print_results)
+
+        # --- Help ---
+        self._menu_help = mb.addMenu("")
+        self._action_about = QAction(self)
+        self._action_manual = QAction(self)
+        self._menu_help.addAction(self._action_about)
+        self._menu_help.addAction(self._action_manual)
+
+        # Connections
+        self._action_exit.triggered.connect(self.close)
+        self._action_about.triggered.connect(self._on_about)
+
+    # ------------------------------------------------------------------
+    # Central widget
+    # ------------------------------------------------------------------
+
+    def _create_central_widget(self):
+        central = QWidget()
+        root_layout = QVBoxLayout(central)
+        root_layout.setContentsMargins(12, 8, 12, 8)
+
+        # Language switch bar (top-right)
+        lang_bar = QHBoxLayout()
+        lang_bar.addStretch()
+
+        self._btn_ja = QPushButton("日本語")
+        self._btn_en = QPushButton("English")
+        self._btn_ja.setCheckable(True)
+        self._btn_en.setCheckable(True)
+        self._btn_ja.setChecked(True)
+        self._btn_ja.setFixedWidth(80)
+        self._btn_en.setFixedWidth(80)
+
+        self._btn_ja.clicked.connect(lambda: self._switch_language("ja"))
+        self._btn_en.clicked.connect(lambda: self._switch_language("en"))
+
+        lang_bar.addWidget(self._btn_ja)
+        lang_bar.addWidget(self._btn_en)
+        root_layout.addLayout(lang_bar)
+
+        # Welcome area
+        self._label_welcome = QLabel()
+        self._label_welcome.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = self._label_welcome.font()
+        font.setPointSize(14)
+        self._label_welcome.setFont(font)
+        root_layout.addWidget(self._label_welcome, stretch=1)
+
+        self.setCentralWidget(central)
+
+    # ------------------------------------------------------------------
+    # Status bar
+    # ------------------------------------------------------------------
+
+    def _create_status_bar(self):
+        self._status_bar = QStatusBar()
+        self.setStatusBar(self._status_bar)
+
+    # ------------------------------------------------------------------
+    # Retranslation — called on startup and on every language change
+    # ------------------------------------------------------------------
+
+    def _retranslate_ui(self):
+        self.setWindowTitle(self.tr("OpenARDF-calc - ARDF競技集計ソフト"))
+
+        self._menu_file.setTitle(self.tr("ファイル"))
+        self._action_new.setText(self.tr("新規大会"))
+        self._action_open.setText(self.tr("大会を開く"))
+        self._action_import_csv.setText(self.tr("参加者データ読み込み CSV"))
+        self._menu_si.setTitle(self.tr("SIデータ読み込み"))
+        self._action_import_si_manager.setText(self.tr("SI Manager CSV から読み込み"))
+        self._action_import_si_direct.setText(self.tr("SIリーダーから直接読み込み"))
+        self._action_export.setText(self.tr("結果を出力"))
+        self._action_exit.setText(self.tr("終了"))
+
+        self._menu_competition.setTitle(self.tr("競技"))
+        self._action_comp_settings.setText(self.tr("競技設定"))
+        self._action_competitors.setText(self.tr("参加者管理"))
+        self._action_absences.setText(self.tr("欠席登録"))
+
+        self._menu_results.setTitle(self.tr("結果"))
+        self._action_calc_rankings.setText(self.tr("順位集計"))
+        self._action_view_results.setText(self.tr("結果表示"))
+        self._action_print_results.setText(self.tr("結果印刷"))
+
+        self._menu_help.setTitle(self.tr("ヘルプ"))
+        self._action_about.setText(self.tr("このソフトについて"))
+        self._action_manual.setText(self.tr("マニュアル"))
+
+        self._label_welcome.setText(
+            self.tr(
+                "OpenARDF-calc へようこそ\n\n"
+                "大会を作成するか、既存の大会を開いてください。"
+            )
+        )
+        self._status_bar.showMessage(self.tr("準備完了"))
+
+    def changeEvent(self, event: QEvent):
+        if event.type() == QEvent.Type.LanguageChange:
+            self._retranslate_ui()
+        super().changeEvent(event)
+
+    # ------------------------------------------------------------------
+    # Language switching
+    # ------------------------------------------------------------------
+
+    def _switch_language(self, lang: str):
+        if lang == self._current_lang:
+            # Keep button state consistent even if user re-clicks
+            self._btn_ja.setChecked(lang == "ja")
+            self._btn_en.setChecked(lang == "en")
+            return
+
+        app = QApplication.instance()
+
+        if self._current_lang != "ja":
+            app.removeTranslator(self._translator)
+
+        if lang == "en":
+            qm_path = TRANSLATIONS_DIR / "en.qm"
+            if not qm_path.exists():
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    (
+                        f"Translation file not found:\n{qm_path}\n\n"
+                        "Run:  python scripts/build_translations.py"
+                    ),
+                )
+                self._btn_ja.setChecked(True)
+                self._btn_en.setChecked(False)
+                return
+            self._translator.load(str(qm_path))
+            app.installTranslator(self._translator)
+
+        self._current_lang = lang
+        self._btn_ja.setChecked(lang == "ja")
+        self._btn_en.setChecked(lang == "en")
+
+    # ------------------------------------------------------------------
+    # Slots
+    # ------------------------------------------------------------------
+
+    def _on_about(self):
+        QMessageBox.about(
+            self,
+            self.tr("OpenARDF-calc について"),
+            self.tr(
+                "OpenARDF-calc\n\n"
+                "ARDF競技集計ソフトウェア\n\n"
+                "バージョン: 0.1.0\n"
+                "ライセンス: MIT\n"
+                "著作者: JF9SOM"
+            ),
+        )
