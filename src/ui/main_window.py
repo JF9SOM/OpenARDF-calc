@@ -22,6 +22,7 @@ from core.competitor_dao import CompetitorDAO
 from core.ranking import RankingEngine
 from core.result_exporter import export_all
 from ui.competitors_window import CompetitorsWindow
+from ui.dialogs.about_dialog import AboutDialog
 from ui.dialogs.absence_dialog import AbsenceDialog
 from ui.dialogs.competition_settings import CompetitionSettingsDialog
 from ui.dialogs.si_import_dialog import SIImportDialog
@@ -521,14 +522,5 @@ class MainWindow(QMainWindow):
         )
 
     def _on_about(self):
-        QMessageBox.about(
-            self,
-            self.tr("OpenARDF-calc について"),
-            self.tr(
-                "OpenARDF-calc\n\n"
-                "ARDF競技集計ソフトウェア\n\n"
-                "バージョン: 0.1.0\n"
-                "ライセンス: MIT\n"
-                "著作者: JF9SOM"
-            ),
-        )
+        dlg = AboutDialog(parent=self)
+        dlg.exec()
