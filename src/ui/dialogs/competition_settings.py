@@ -36,7 +36,7 @@ class CompetitionSettingsDialog(QDialog):
     _CLASSES = ("W19", "W21", "W35", "W50", "M19", "M21", "M40", "M50", "M60")
     _DEFAULT_WINNERS: dict[str, int] = {"M60": 2}
 
-    def __init__(self, parent=None):
+    def __init__(self, db_path: Optional[Path] = None, parent=None):
         super().__init__(parent)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setWindowFlags(
@@ -62,10 +62,13 @@ class CompetitionSettingsDialog(QDialog):
                 padding: 0 4px;
             }
         """)
-        self._db_path: Optional[Path] = None
+        self._db_path: Optional[Path] = db_path
         self._competition_id: Optional[int] = None
+        self._edit_mode: bool = db_path is not None
         self._setup_ui()
         self._retranslate_ui()
+        if self._edit_mode:
+            self._load_existing_data()
 
     # ------------------------------------------------------------------
     # Public properties
@@ -218,8 +221,9 @@ class CompetitionSettingsDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _retranslate_ui(self) -> None:
-        self.setWindowTitle(self.tr("新規大会の設定"))
-        self._header_label.setText(self.tr("新規大会の設定"))
+        title = self.tr("競技設定の編集") if self._edit_mode else self.tr("新規大会の設定")
+        self.setWindowTitle(title)
+        self._header_label.setText(title)
 
         self._lbl_name.setText(self.tr("大会名称"))
         self._lbl_date.setText(self.tr("開催年月日"))
@@ -243,6 +247,54 @@ class CompetitionSettingsDialog(QDialog):
         super().changeEvent(event)
 
     # ------------------------------------------------------------------
+    # Load existing data (edit mode)
+    # ------------------------------------------------------------------
+
+    def _load_existing_data(self) -> None:
+        try:
+            conn = sqlite3.connect(str(self._db_path))
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM competition LIMIT 1").fetchone()
+            conn.close()
+        except Exception:
+            return
+        if row is None:
+            return
+
+        self._competition_id = row["id"]
+        self._name_edit.setText(row["name"] or "")
+
+        if row["date"]:
+            d = QDate.fromString(row["date"], "yyyy-MM-dd")
+            if d.isValid():
+                self._date_edit.setDate(d)
+        if row["start_time_g1"]:
+            t = QTime.fromString(row["start_time_g1"], "HH:mm:ss")
+            if t.isValid():
+                self._start_time_edit.setTime(t)
+        if row["si_base_time"]:
+            t = QTime.fromString(row["si_base_time"], "HH:mm:ss")
+            if t.isValid():
+                self._si_base_edit.setTime(t)
+
+        self._group_count_spin.setValue(row["group_score_count"] or 3)
+        self._chk_all_tx.setChecked(bool(row["all_tx_search"]))
+        self._chk_w50_m60.setChecked(bool(row["w50_m60_optional"]))
+        self._chk_beacon.setChecked(bool(row["beacon_search"]))
+
+        w = self._winner_spins
+        for cls, col in [
+            ("W19", "winners_w19"), ("W21", "winners_w21"),
+            ("W35", "winners_w35"), ("W50", "winners_w50"),
+            ("M19", "winners_m19"), ("M21", "winners_m21"),
+            ("M40", "winners_m40"), ("M50", "winners_m50"),
+            ("M60", "winners_m60"),
+        ]:
+            val = row[col]
+            if val is not None:
+                w[cls].setValue(val)
+
+    # ------------------------------------------------------------------
     # Save handler
     # ------------------------------------------------------------------
 
@@ -257,6 +309,57 @@ class CompetitionSettingsDialog(QDialog):
             self._name_edit.setFocus()
             return
 
+        if self._edit_mode:
+            self._save_update(name)
+        else:
+            self._save_new(name)
+
+    def _save_update(self, name: str) -> None:
+        w = self._winner_spins
+        try:
+            conn = sqlite3.connect(str(self._db_path))
+            conn.execute(
+                """
+                UPDATE competition SET
+                    name=?, date=?, start_time_g1=?, si_base_time=?,
+                    all_tx_search=?, w50_m60_optional=?, beacon_search=?,
+                    group_score_count=?,
+                    winners_w19=?, winners_w21=?, winners_w35=?, winners_w50=?,
+                    winners_m19=?, winners_m21=?, winners_m40=?, winners_m50=?,
+                    winners_m60=?
+                WHERE id=?
+                """,
+                (
+                    name,
+                    self._date_edit.date().toString("yyyy-MM-dd"),
+                    self._start_time_edit.time().toString("HH:mm:ss"),
+                    self._si_base_edit.time().toString("HH:mm:ss"),
+                    int(self._chk_all_tx.isChecked()),
+                    int(self._chk_w50_m60.isChecked()),
+                    int(self._chk_beacon.isChecked()),
+                    self._group_count_spin.value(),
+                    w["W19"].value(), w["W21"].value(),
+                    w["W35"].value(), w["W50"].value(),
+                    w["M19"].value(), w["M21"].value(),
+                    w["M40"].value(), w["M50"].value(),
+                    w["M60"].value(),
+                    self._competition_id,
+                ),
+            )
+            conn.commit()
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                self.tr("保存エラー"),
+                self.tr("保存中にエラーが発生しました:\n") + str(exc),
+            )
+            return
+        finally:
+            conn.close()
+
+        self.accept()
+
+    def _save_new(self, name: str) -> None:
         path, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("大会ファイルの保存先を選択"),

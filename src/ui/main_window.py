@@ -400,25 +400,15 @@ class MainWindow(QMainWindow):
                 self.tr("先に大会を作成または開いてください。"),
             )
             return
-        try:
-            conn = sqlite3.connect(str(self._current_db_path))
-            row = conn.execute("SELECT * FROM competition LIMIT 1").fetchone()
-            conn.close()
-        except Exception:
-            return
-        if row is None:
-            return
-        keys = [
-            "name", "date", "start_time_g1", "si_base_time",
-            "group_score_count",
-        ]
-        info = "\n".join(
-            f"{k}: {row[k]}" for k in keys if row[k] is not None
-        )
-        QMessageBox.information(
-            self, self.tr("競技設定"),
-            self.tr("現在の大会設定:\n\n") + info,
-        )
+        dlg = CompetitionSettingsDialog(db_path=self._current_db_path, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self._current_competition_name = dlg.competition_name
+            base_title = self.tr("OpenARDF-calc - ARDF競技集計ソフト")
+            self.setWindowTitle(f"{self._current_competition_name} — {base_title}")
+            self._label_welcome.setText(
+                self.tr("開催中の大会: ") + self._current_competition_name
+            )
+            self._status_bar.showMessage(self.tr("競技設定を保存しました"))
 
     def _on_absences(self) -> None:
         if self._current_db_path is None:
