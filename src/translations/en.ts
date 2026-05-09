@@ -249,10 +249,6 @@ Create a new competition or open an existing one.</translation>
         <translation>GitHub Repository</translation>
     </message>
     <message>
-        <source>参考マニュアル (ARDF SI)</source>
-        <translation>Reference Manual (ARDF SI)</translation>
-    </message>
-    <message>
         <source>OK</source>
         <translation>OK</translation>
     </message>

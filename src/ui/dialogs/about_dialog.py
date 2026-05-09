@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
 
 _VERSION = "0.1.0"
 _GITHUB_URL = "https://github.com/JF9SOM/OpenARDF-calc"
-_MANUAL_URL = "https://fdt.rdf.jp/si_system/doc/ardf_si_090801.pdf"
 _ACCENT = "#4a6fa0"
 _ACCENT_DARK = "#2a4f7a"
 _ACCENT_MID = "#5a7a9a"
@@ -209,22 +208,6 @@ class AboutDialog(QDialog):
         )
         links.addWidget(self._lbl_github_link)
 
-        self._lbl_manual_key = QLabel()
-        self._lbl_manual_key.setStyleSheet(
-            f"color: {_ACCENT_MID}; font-weight: bold;"
-        )
-        links.addWidget(self._lbl_manual_key)
-
-        self._lbl_manual_link = QLabel(
-            f'<a href="{_MANUAL_URL}" style="color:#2a6fba;">{_MANUAL_URL}</a>'
-        )
-        self._lbl_manual_link.setOpenExternalLinks(True)
-        self._lbl_manual_link.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextBrowserInteraction
-        )
-        self._lbl_manual_link.setWordWrap(True)
-        links.addWidget(self._lbl_manual_link)
-
         content.addLayout(links)
 
         # ── フッター ──────────────────────────────────────────────
@@ -267,7 +250,6 @@ class AboutDialog(QDialog):
         self._lbl_tech_key.setText(self.tr("使用技術"))
 
         self._lbl_github_key.setText(self.tr("GitHub リポジトリ"))
-        self._lbl_manual_key.setText(self.tr("参考マニュアル (ARDF SI)"))
 
         self._btn_ok.setText(self.tr("OK"))
 
