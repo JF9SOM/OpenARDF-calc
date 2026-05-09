@@ -25,6 +25,7 @@ from ui.competitors_window import CompetitorsWindow
 from ui.dialogs.absence_dialog import AbsenceDialog
 from ui.dialogs.competition_settings import CompetitionSettingsDialog
 from ui.dialogs.si_import_dialog import SIImportDialog
+from ui.manual_results_window import ManualResultsWindow
 from ui.results_window import ResultsWindow
 
 TRANSLATIONS_DIR = Path(__file__).parent.parent / "translations"
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
         self._current_db_path: Optional[Path] = None
         self._competitors_window: Optional[CompetitorsWindow] = None
         self._results_window: Optional[ResultsWindow] = None
+        self._manual_results_window: Optional[ManualResultsWindow] = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -91,9 +93,12 @@ class MainWindow(QMainWindow):
         self._action_comp_settings.setEnabled(False)
         self._action_competitors = QAction(self)
         self._action_absences = QAction(self)
+        self._action_manual_results = QAction(self)
+        self._action_manual_results.setEnabled(False)
         self._menu_competition.addAction(self._action_comp_settings)
         self._menu_competition.addAction(self._action_competitors)
         self._menu_competition.addAction(self._action_absences)
+        self._menu_competition.addAction(self._action_manual_results)
         # Disabled until a competition is open
         self._action_competitors.setEnabled(False)
         self._action_absences.setEnabled(False)
@@ -127,6 +132,7 @@ class MainWindow(QMainWindow):
         self._action_comp_settings.triggered.connect(self._on_comp_settings)
         self._action_competitors.triggered.connect(self._on_competitors)
         self._action_absences.triggered.connect(self._on_absences)
+        self._action_manual_results.triggered.connect(self._on_manual_results)
         self._action_calc_rankings.triggered.connect(self._on_calc_rankings)
         self._action_view_results.triggered.connect(self._on_view_results)
         self._action_print_results.triggered.connect(self._on_print_results)
@@ -203,6 +209,7 @@ class MainWindow(QMainWindow):
         self._action_comp_settings.setText(self.tr("競技設定"))
         self._action_competitors.setText(self.tr("参加者管理"))
         self._action_absences.setText(self.tr("欠席登録"))
+        self._action_manual_results.setText(self.tr("棄権・失格登録"))
 
         self._menu_results.setTitle(self.tr("結果"))
         self._action_calc_rankings.setText(self.tr("順位集計"))
@@ -289,6 +296,7 @@ class MainWindow(QMainWindow):
         # Enable competition-specific menu actions
         self._action_competitors.setEnabled(True)
         self._action_absences.setEnabled(True)
+        self._action_manual_results.setEnabled(True)
         self._action_import_csv.setEnabled(True)
         self._action_import_si_manager.setEnabled(True)
         self._action_export.setEnabled(True)
@@ -417,6 +425,24 @@ class MainWindow(QMainWindow):
             return
         dlg = AbsenceDialog(self._current_db_path, parent=self)
         dlg.exec()
+
+    def _on_manual_results(self) -> None:
+        if self._current_db_path is None:
+            return
+        # Bring existing window to front if already open
+        if self._manual_results_window is not None:
+            self._manual_results_window.raise_()
+            self._manual_results_window.activateWindow()
+            return
+        self._manual_results_window = ManualResultsWindow(
+            self._current_db_path,
+            competition_name=self._current_competition_name,
+            parent=None,  # independent window
+        )
+        self._manual_results_window.destroyed.connect(
+            lambda: setattr(self, "_manual_results_window", None)
+        )
+        self._manual_results_window.show()
 
     def _on_calc_rankings(self) -> None:
         if self._current_db_path is None:

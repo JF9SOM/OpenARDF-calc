@@ -44,6 +44,13 @@ class SIResultDAO:
             ).fetchall()
         return {r["si_number"]: r["id"] for r in rows}
 
+    def get_by_competitor_id(self, competitor_id: int) -> Optional[dict[str, Any]]:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM results WHERE competitor_id=?", (competitor_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
     # ------------------------------------------------------------------
     # Upsert
     # ------------------------------------------------------------------
