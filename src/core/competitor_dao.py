@@ -7,32 +7,42 @@ from typing import Any, Optional
 
 # All writable columns in the competitor table (id and created_at excluded)
 COMPETITOR_COLS: tuple[str, ...] = (
-    "bib_number", "si_number", "call_sign", "name", "class_name",
+    "bib_number", "si_number", "call_sign", "name", "yomigana", "class_name",
     "birthday", "division", "start_order", "group_name",
     "address1", "address2", "tel", "email", "region", "prefecture",
     "absent", "disqualified", "disqualification_reason",
 )
 
-# CSV header → DB column (ARDF SI compatible)
+# CSV header → DB column (ARDF SI compatible; includes half-width katakana variants)
 _CSV_TO_DB: dict[str, str] = {
-    "ゼッケン":       "bib_number",
-    "SINo":          "si_number",
-    "SI No":         "si_number",
-    "コールサイン":    "call_sign",
-    "氏名":           "name",
-    "クラス":          "class_name",
-    "生年月日":        "birthday",
-    "区分":           "division",
-    "スタート":        "start_order",
-    "グループ":        "group_name",
-    "住所1":          "address1",
-    "住所2":          "address2",
-    "TEL":           "tel",
-    "E-mail":        "email",
-    "地方":           "region",
-    "県":            "prefecture",
-    "失格有無":        "disqualified",
-    "失格理由":        "disqualification_reason",
+    # Full-width (OpenARDF-calc native export)
+    "ゼッケン":        "bib_number",
+    "SINo":           "si_number",
+    "SI No":          "si_number",
+    "コールサイン":     "call_sign",
+    "氏名":            "name",
+    "よみがな":         "yomigana",
+    "クラス":           "class_name",
+    "生年月日":         "birthday",
+    "区分":            "division",
+    "スタート":         "start_order",
+    "グループ":         "group_name",
+    "住所1":           "address1",
+    "住所2":           "address2",
+    "TEL":            "tel",
+    "E-mail":         "email",
+    "地方":            "region",
+    "県":             "prefecture",
+    "失格有無":         "disqualified",
+    "失格理由":         "disqualification_reason",
+    "出欠":            "absent",
+    # Half-width katakana (ARDF SI software export)
+    "ｾﾞｯｹﾝ":          "bib_number",
+    "ｺｰﾙｻｲﾝ":         "call_sign",
+    "ｸﾗｽ":            "class_name",
+    "ｽﾀｰﾄ":           "start_order",
+    "ｽﾀｰﾄ組":          "start_order",
+    "ｸﾞﾙｰﾌﾟ":         "group_name",
 }
 
 # DB column → CSV header for export
@@ -41,6 +51,7 @@ _DB_TO_CSV: dict[str, str] = {
     "si_number":               "SINo",
     "call_sign":               "コールサイン",
     "name":                    "氏名",
+    "yomigana":                "よみがな",
     "class_name":              "クラス",
     "birthday":                "生年月日",
     "division":                "区分",
@@ -59,7 +70,7 @@ _DB_TO_CSV: dict[str, str] = {
 # Columns written to export CSV (absent is internal-only)
 _EXPORT_COLS: tuple[str, ...] = tuple(c for c in COMPETITOR_COLS if c != "absent")
 
-_ENCODINGS = ("utf-8-sig", "cp932", "utf-8")
+_ENCODINGS = ("utf-8-sig", "utf-8", "cp932", "latin-1")
 
 
 class CompetitorDAO:

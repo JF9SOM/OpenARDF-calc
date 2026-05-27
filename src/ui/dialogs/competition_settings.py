@@ -460,6 +460,7 @@ def _create_tables(conn: sqlite3.Connection) -> None:
             si_number               TEXT,
             call_sign               TEXT,
             name                    TEXT,
+            yomigana                TEXT,
             class_name              TEXT,
             birthday                TEXT,
             division                TEXT,
@@ -503,3 +504,8 @@ def _create_tables(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    # Migration: add yomigana column to existing databases
+    try:
+        conn.execute("ALTER TABLE competitor ADD COLUMN yomigana TEXT")
+    except Exception:
+        pass  # Column already exists
