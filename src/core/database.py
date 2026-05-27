@@ -5,6 +5,15 @@ from typing import Optional
 from ui.dialogs.competition_settings import _create_tables
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Apply incremental schema migrations to an existing database."""
+    try:
+        conn.execute("ALTER TABLE competitor ADD COLUMN yomigana TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+
 class Database:
     """SQLite connection wrapper for one competition file."""
 
@@ -22,6 +31,7 @@ class Database:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         _create_tables(self._conn)
+        _migrate(self._conn)
 
     def close(self) -> None:
         if self._conn:

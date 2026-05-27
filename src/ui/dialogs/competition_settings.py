@@ -504,8 +504,3 @@ def _create_tables(conn: sqlite3.Connection) -> None:
         );
         """
     )
-    # Migration: add yomigana column to existing databases
-    try:
-        conn.execute("ALTER TABLE competitor ADD COLUMN yomigana TEXT")
-    except Exception:
-        pass  # Column already exists

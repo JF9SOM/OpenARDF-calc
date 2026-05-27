@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Optional
 
+from core.database import _migrate
+
 # All writable columns in the competitor table (id and created_at excluded)
 COMPETITOR_COLS: tuple[str, ...] = (
     "bib_number", "si_number", "call_sign", "name", "yomigana", "class_name",
@@ -87,6 +89,7 @@ class CompetitorDAO:
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")
+        _migrate(conn)
         return conn
 
     def _read_text(self, path: Path) -> str:
