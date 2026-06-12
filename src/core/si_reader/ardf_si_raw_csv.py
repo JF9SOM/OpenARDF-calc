@@ -111,14 +111,30 @@ def _parse_row(row: list[str]) -> dict[str, Any] | None:
                 pass
 
     # col 10+: pairs of (control_number, elapsed_time)
-    tx_punches: dict[int, str] = {}
+    all_punches: dict[int, str] = {}
     idx = 10
     while idx + 1 < len(row):
         ctrl = row[idx].strip()
         time = row[idx + 1].strip()
         if ctrl.isdigit() and _TIME_RE.match(time):
-            tx_punches[int(ctrl)] = time
+            all_punches[int(ctrl)] = time
         idx += 2
+
+    # The finish control is the punch whose time is closest to col6 (readout time).
+    # Col6 is recorded a few seconds after the actual finish punch, so the finish
+    # control is whichever punch has the smallest positive delta from col6.
+    # That control is excluded from tx_punches.
+    tx_punches = dict(all_punches)
+    if finish_time and all_punches:
+        finish_sec = _hms_to_seconds(finish_time)
+        finish_ctrl = min(
+            all_punches,
+            key=lambda c: abs(finish_sec - _hms_to_seconds(all_punches[c])),
+        )
+        # Use the actual punch time (not the readout time) as finish_time
+        finish_time = all_punches[finish_ctrl]
+        elapsed_seconds = _hms_to_seconds(finish_time)
+        del tx_punches[finish_ctrl]
 
     return {
         "si_number": si_number,
