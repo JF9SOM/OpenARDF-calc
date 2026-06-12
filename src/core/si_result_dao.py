@@ -124,9 +124,13 @@ class SIResultDAO:
                 unmatched.append(si)
                 continue
 
-            elapsed: Optional[int] = None
             finish_time: Optional[str] = rec.get("finish_time")
-            if finish_time and si_base_time:
+
+            # Use pre-computed elapsed_seconds if the reader already provided it
+            if "elapsed_seconds" in rec and rec["elapsed_seconds"] is not None:
+                elapsed: Optional[int] = rec["elapsed_seconds"]
+            elif finish_time and si_base_time:
+                elapsed = None
                 try:
                     elapsed = _hms_to_seconds(finish_time) - _hms_to_seconds(si_base_time)
                     if elapsed < 0:
@@ -135,6 +139,8 @@ class SIResultDAO:
                     warnings.append(
                         f"SI {si}: 時刻変換エラー — {exc}"
                     )
+            else:
+                elapsed = None
 
             try:
                 self.upsert(

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from core.si_reader.ardf_si_raw_csv import ARDFSIRawCSVReader, _is_raw_format
 from core.si_reader.si_manager_csv import SIManagerCSVReader
 from core.si_result_dao import SIResultDAO
 
@@ -34,7 +35,8 @@ class SIImportDialog(QDialog):
         super().__init__(parent)
         self._db_path = db_path
         self._dao = SIResultDAO(db_path)
-        self._reader = SIManagerCSVReader()
+        self._reader_standard = SIManagerCSVReader()
+        self._reader_raw = ARDFSIRawCSVReader()
 
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setWindowFlags(
@@ -176,8 +178,9 @@ class SIImportDialog(QDialog):
         self._run_import(Path(path))
 
     def _run_import(self, path: Path) -> None:
+        reader = self._reader_raw if _is_raw_format(path) else self._reader_standard
         try:
-            records = self._reader.read(path)
+            records = reader.read(path)
         except Exception as exc:
             QMessageBox.critical(
                 self,
