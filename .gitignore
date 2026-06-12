@@ -35,6 +35,9 @@ venv/
 *.sqlite3
 *.ardf
 
+# Test data (may contain personal information)
+test-data/
+
 # Logs
 *.log
 
