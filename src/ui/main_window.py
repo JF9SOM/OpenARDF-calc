@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
             self,
             self.tr("参加者CSVを開く"),
             str(Path.home()),
-            self.tr("CSV ファイル (*.csv);;すべてのファイル (*)"),
+            self.tr("CSV ファイル (*.csv *.CSV);;すべてのファイル (*)"),
         )
         if not path:
             return
