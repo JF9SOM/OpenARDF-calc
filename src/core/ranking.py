@@ -26,6 +26,7 @@ class RankedCompetitor:
     region: Optional[str] = None
     prefecture: Optional[str] = None
     division: Optional[str] = None
+    address1: Optional[str] = None
 
     @property
     def is_ranked(self) -> bool:
@@ -43,15 +44,13 @@ class RankedCompetitor:
 
     @property
     def elapsed_str(self) -> str:
-        """Elapsed time as H:MM:SS or MM:SS."""
+        """Elapsed time as H:MM:SS."""
         if self.elapsed_seconds is None:
             return self.finish_time or ""
         total = abs(self.elapsed_seconds)
         h, rem = divmod(total, 3600)
         m, s = divmod(rem, 60)
-        if h:
-            return f"{h}:{m:02d}:{s:02d}"
-        return f"{m:02d}:{s:02d}"
+        return f"{h}:{m:02d}:{s:02d}"
 
 
 class RankingEngine:
@@ -81,7 +80,7 @@ class RankingEngine:
                     COALESCE(c.absent, 0)       AS absent,
                     COALESCE(c.disqualified, 0) AS disqualified,
                     c.disqualification_reason,
-                    c.region, c.prefecture, c.division,
+                    c.region, c.prefecture, c.division, c.address1,
                     COALESCE(r.punched_tx_count, 0) AS punched_tx_count,
                     r.finish_time, r.elapsed_seconds,
                     COALESCE(r.overtime, 0) AS overtime
@@ -115,6 +114,7 @@ class RankingEngine:
                 region=row["region"],
                 prefecture=row["prefecture"],
                 division=row["division"],
+                address1=row["address1"],
             )
             for row in rows
         ]
@@ -124,6 +124,28 @@ class RankingEngine:
         """Return {class_name: [RankedCompetitor, ...]} sorted by class name."""
         result: dict[str, list[RankedCompetitor]] = {}
         for rc in self.compute():
+            result.setdefault(rc.class_name, []).append(rc)
+        return result
+
+    def compute_regional(
+        self, prefectures: list[str]
+    ) -> list[RankedCompetitor]:
+        """Return ranked competitors filtered to those whose address1 starts
+        with one of *prefectures* (e.g. ["石川県", "富山県", "福井県"]).
+        Ranks are re-assigned within the filtered set per class."""
+        all_competitors = self.compute()
+        regional = [
+            rc for rc in all_competitors
+            if _is_regional(rc.address1, prefectures)
+        ]
+        return self._assign_ranks(regional)
+
+    def compute_regional_by_class(
+        self, prefectures: list[str]
+    ) -> dict[str, list[RankedCompetitor]]:
+        """Return {class_name: [...]} for regional competitors only."""
+        result: dict[str, list[RankedCompetitor]] = {}
+        for rc in self.compute_regional(prefectures):
             result.setdefault(rc.class_name, []).append(rc)
         return result
 
@@ -139,12 +161,32 @@ class RankingEngine:
         return result
 
     def _rank_class(self, competitors: list[RankedCompetitor]) -> list[RankedCompetitor]:
-        ranked = [c for c in competitors if c.is_ranked]
+        eligible = [c for c in competitors if c.is_ranked]
         unranked = [c for c in competitors if not c.is_ranked]
-        ranked.sort(key=lambda c: (
+
+        # Non-overtime rank first; overtime are appended after with ** (no rank number)
+        normal = [c for c in eligible if not c.overtime]
+        overtime = [c for c in eligible if c.overtime]
+
+        normal.sort(key=lambda c: (
             -c.punched_tx_count,
             c.elapsed_seconds if c.elapsed_seconds is not None else 999_999,
         ))
-        for i, rc in enumerate(ranked, start=1):
+        overtime.sort(key=lambda c: (
+            -c.punched_tx_count,
+            c.elapsed_seconds if c.elapsed_seconds is not None else 999_999,
+        ))
+
+        for i, rc in enumerate(normal, start=1):
             rc.rank = i
-        return ranked + unranked
+        for rc in overtime:
+            rc.rank = None  # ** 表示（順位なし）
+
+        return normal + overtime + unranked
+
+
+def _is_regional(address1: Optional[str], prefectures: list[str]) -> bool:
+    """Return True if address1 starts with any of the given prefecture names."""
+    if not address1 or not prefectures:
+        return False
+    return any(address1.startswith(p) for p in prefectures)

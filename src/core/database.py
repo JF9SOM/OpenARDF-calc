@@ -7,8 +7,15 @@ from ui.dialogs.competition_settings import _create_tables
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """Apply incremental schema migrations to an existing database."""
+    _add_column(conn, "competitor", "yomigana", "TEXT")
+    _add_column(conn, "competition", "group_interval_min", "INTEGER NOT NULL DEFAULT 5")
+    _add_column(conn, "competition", "time_limit_min", "INTEGER NOT NULL DEFAULT 120")
+    _add_column(conn, "competition", "regional_prefectures", "TEXT")
+
+
+def _add_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     try:
-        conn.execute("ALTER TABLE competitor ADD COLUMN yomigana TEXT")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
         conn.commit()
     except sqlite3.OperationalError:
         pass  # column already exists

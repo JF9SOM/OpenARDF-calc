@@ -98,17 +98,12 @@ def _parse_row(row: list[str]) -> dict[str, Any] | None:
 
     si_number = _si_number_key(si_card)
 
-    # col 6: elapsed finish time
-    finish_time: str | None = None
-    elapsed_seconds: int | None = None
+    # col 6: finish time relative to SI zero (SI基準時刻からの経過)
+    col6_time: str | None = None
     if len(row) > 6:
         ft = row[6].strip()
         if _TIME_RE.match(ft):
-            finish_time = ft
-            try:
-                elapsed_seconds = _hms_to_seconds(ft)
-            except ValueError:
-                pass
+            col6_time = ft
 
     # col 10+: pairs of (control_number, elapsed_time)
     all_punches: dict[int, str] = {}
@@ -121,28 +116,24 @@ def _parse_row(row: list[str]) -> dict[str, Any] | None:
         idx += 2
 
     # The finish control is the punch whose time is closest to col6 (readout time).
-    # Col6 is recorded a few seconds after the actual finish punch, so the finish
-    # control is whichever punch has the smallest positive delta from col6.
-    # That control is excluded from tx_punches.
+    # Identify it and remove it from tx_punches so it isn't counted as a TX.
+    # col6 itself is the official finish time used for elapsed calculation.
     tx_punches = dict(all_punches)
-    if finish_time and all_punches:
-        finish_sec = _hms_to_seconds(finish_time)
+    if col6_time and all_punches:
+        col6_sec = _hms_to_seconds(col6_time)
         finish_ctrl = min(
             all_punches,
-            key=lambda c: abs(finish_sec - _hms_to_seconds(all_punches[c])),
+            key=lambda c: abs(col6_sec - _hms_to_seconds(all_punches[c])),
         )
-        # Use the actual punch time (not the readout time) as finish_time
-        finish_time = all_punches[finish_ctrl]
-        elapsed_seconds = _hms_to_seconds(finish_time)
         del tx_punches[finish_ctrl]
 
     return {
         "si_number": si_number,
         "si_card_full": si_card,
-        "finish_time": finish_time,
-        "elapsed_seconds": elapsed_seconds,
+        "finish_time": col6_time,        # col6 = SI基準時刻からの経過時間（公式タイムの基準）
+        "time_format": "si_relative",    # DAOに si_zero + finish - group_start で計算させる
         "punched_tx_count": len(tx_punches),
-        "overtime": False,
+        "overtime": False,               # DAOで制限時間と比較して上書き
         "raw_status": None,
         "tx_punches": tx_punches,
     }

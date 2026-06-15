@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Optional
 
@@ -46,9 +47,10 @@ _RESULT_COLS = (
 class ResultsWindow(QMainWindow):
     """競技結果表示ウィンドウ。
 
-    - Tab 0: 総合結果（全クラス）
-    - Tab 1: クラス別（クラス選択）
-    - Tab 2: ラップタイム（各TX時刻）
+    - Tab 0: 地域結果（地域対象県の選手のみ）
+    - Tab 1: 総合結果（全選手）
+    - Tab 2: クラス別（クラス選択）
+    - Tab 3: ラップタイム（各TX時刻）
     """
 
     def __init__(self, db_path: Path, competition_name: str = "", parent=None):
@@ -61,6 +63,9 @@ class ResultsWindow(QMainWindow):
         self._engine = RankingEngine(db_path)
         self._ranked: list[RankedCompetitor] = []
         self._by_class: dict[str, list[RankedCompetitor]] = {}
+        self._regional: list[RankedCompetitor] = []
+        self._regional_by_class: dict[str, list[RankedCompetitor]] = {}
+        self._regional_prefectures: list[str] = []
 
         self._setup_ui()
         self._retranslate_ui()
@@ -114,7 +119,15 @@ class ResultsWindow(QMainWindow):
         """)
         self.setCentralWidget(self._tabs)
 
-        # Tab 0: 総合結果
+        # Tab 0: 地域結果
+        self._tab_regional = QWidget()
+        self._tbl_regional = self._make_result_table(show_class=True)
+        lay_r = QVBoxLayout(self._tab_regional)
+        lay_r.setContentsMargins(0, 0, 0, 0)
+        lay_r.addWidget(self._tbl_regional)
+        self._tabs.addTab(self._tab_regional, "")
+
+        # Tab 1: 総合結果
         self._tab_general = QWidget()
         self._tbl_general = self._make_result_table(show_class=True)
         lay0 = QVBoxLayout(self._tab_general)
@@ -122,7 +135,7 @@ class ResultsWindow(QMainWindow):
         lay0.addWidget(self._tbl_general)
         self._tabs.addTab(self._tab_general, "")
 
-        # Tab 1: クラス別
+        # Tab 2: クラス別
         self._tab_class = QWidget()
         lay1 = QVBoxLayout(self._tab_class)
         lay1.setContentsMargins(4, 4, 4, 4)
@@ -140,7 +153,7 @@ class ResultsWindow(QMainWindow):
         lay1.addWidget(self._tbl_class)
         self._tabs.addTab(self._tab_class, "")
 
-        # Tab 2: ラップタイム
+        # Tab 3: ラップタイム
         self._tab_lap = QWidget()
         lay2 = QVBoxLayout(self._tab_lap)
         lay2.setContentsMargins(0, 0, 0, 0)
@@ -206,9 +219,10 @@ class ResultsWindow(QMainWindow):
         self._action_reload.setText(self.tr("再計算"))
         self._action_print.setText(self.tr("印刷"))
         self._action_export.setText(self.tr("CSV出力"))
-        self._tabs.setTabText(0, self.tr("総合結果"))
-        self._tabs.setTabText(1, self.tr("クラス別"))
-        self._tabs.setTabText(2, self.tr("ラップタイム"))
+        self._tabs.setTabText(0, self.tr("地域結果"))
+        self._tabs.setTabText(1, self.tr("総合結果"))
+        self._tabs.setTabText(2, self.tr("クラス別"))
+        self._tabs.setTabText(3, self.tr("ラップタイム"))
         self._lbl_class_sel.setText(self.tr("クラス:"))
 
     def changeEvent(self, event: QEvent) -> None:
@@ -220,23 +234,57 @@ class ResultsWindow(QMainWindow):
     # Data loading
     # ------------------------------------------------------------------
 
+    def _load_regional_prefectures(self) -> list[str]:
+        try:
+            conn = sqlite3.connect(str(self._db_path))
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT regional_prefectures FROM competition LIMIT 1").fetchone()
+            conn.close()
+            raw = row["regional_prefectures"] if row else None
+            if not raw:
+                return []
+            return [p.strip() for p in raw.split(",") if p.strip()]
+        except Exception:
+            return []
+
     def _reload(self) -> None:
+        self._regional_prefectures = self._load_regional_prefectures()
         try:
             self._ranked = self._engine.compute()
             self._by_class = self._engine.compute_by_class()
+            if self._regional_prefectures:
+                self._regional = self._engine.compute_regional(self._regional_prefectures)
+                self._regional_by_class = self._engine.compute_regional_by_class(
+                    self._regional_prefectures
+                )
+            else:
+                self._regional = []
+                self._regional_by_class = {}
         except Exception as exc:
             QMessageBox.critical(self, self.tr("エラー"), str(exc))
             return
 
+        self._fill_regional_table()
         self._fill_general_table()
         self._fill_class_combo()
         self._fill_lap_table()
+        self._update_regional_tab_label()
 
         total = len(self._ranked)
         ranked_count = sum(1 for r in self._ranked if r.rank is not None)
         self._count_label.setText(
             self.tr("登録数: ") + str(total) + self.tr(" 名　ランク: ") + str(ranked_count) + self.tr(" 名")
         )
+
+    def _update_regional_tab_label(self) -> None:
+        if self._regional_prefectures:
+            label = self.tr("地域結果") + f" ({','.join(self._regional_prefectures)})"
+        else:
+            label = self.tr("地域結果") + self.tr(" (未設定)")
+        self._tabs.setTabText(0, label)
+
+    def _fill_regional_table(self) -> None:
+        self._fill_result_table(self._tbl_regional, self._regional, show_class=True)
 
     def _fill_general_table(self) -> None:
         self._fill_result_table(self._tbl_general, self._ranked, show_class=True)
@@ -271,7 +319,6 @@ class ResultsWindow(QMainWindow):
 
         prev_class = None
         for row, rc in enumerate(data):
-            # Class separator: bold bib cell when class changes (general table only)
             if show_class and rc.class_name != prev_class:
                 prev_class = rc.class_name
 
@@ -301,6 +348,9 @@ class ResultsWindow(QMainWindow):
                 tbl.setItem(row, col, item)
 
     def _fill_lap_table(self) -> None:
+        if not self._ranked:
+            self._tbl_lap.setRowCount(0)
+            return
         max_tx = max(
             (max(rc.tx_punches.keys(), default=0) for rc in self._ranked),
             default=0,

@@ -154,6 +154,27 @@ class CompetitionSettingsDialog(QDialog):
         self._si_base_edit.setFont(bold)
         form.addRow(self._lbl_si_base, self._si_base_edit)
 
+        self._lbl_group_interval = QLabel()
+        self._group_interval_spin = QSpinBox()
+        self._group_interval_spin.setRange(1, 60)
+        self._group_interval_spin.setValue(5)
+        self._group_interval_spin.setSuffix(self.tr(" 分"))
+        self._group_interval_spin.setFixedWidth(80)
+        form.addRow(self._lbl_group_interval, self._group_interval_spin)
+
+        self._lbl_time_limit = QLabel()
+        self._time_limit_spin = QSpinBox()
+        self._time_limit_spin.setRange(30, 480)
+        self._time_limit_spin.setValue(120)
+        self._time_limit_spin.setSuffix(self.tr(" 分"))
+        self._time_limit_spin.setFixedWidth(80)
+        form.addRow(self._lbl_time_limit, self._time_limit_spin)
+
+        self._lbl_regional = QLabel()
+        self._regional_edit = QLineEdit()
+        self._regional_edit.setPlaceholderText("石川県,富山県,福井県")
+        form.addRow(self._lbl_regional, self._regional_edit)
+
         self._lbl_group_count = QLabel()
         self._group_count_spin = QSpinBox()
         self._group_count_spin.setRange(1, 10)
@@ -229,6 +250,11 @@ class CompetitionSettingsDialog(QDialog):
         self._lbl_date.setText(self.tr("開催年月日"))
         self._lbl_start_time.setText(self.tr("1組スタート時間"))
         self._lbl_si_base.setText(self.tr("SI基準時間  ★重要★"))
+        self._lbl_group_interval.setText(self.tr("組間隔"))
+        self._time_limit_spin.setSuffix(self.tr(" 分"))
+        self._group_interval_spin.setSuffix(self.tr(" 分"))
+        self._lbl_time_limit.setText(self.tr("制限時間"))
+        self._lbl_regional.setText(self.tr("地域結果対象県"))
         self._lbl_group_count.setText(self.tr("グループ成績対象人数"))
 
         self._tx_group.setTitle(self.tr("TX探索設定"))
@@ -277,6 +303,9 @@ class CompetitionSettingsDialog(QDialog):
             if t.isValid():
                 self._si_base_edit.setTime(t)
 
+        self._group_interval_spin.setValue(row["group_interval_min"] or 5)
+        self._time_limit_spin.setValue(row["time_limit_min"] or 120)
+        self._regional_edit.setText(row["regional_prefectures"] or "")
         self._group_count_spin.setValue(row["group_score_count"] or 3)
         self._chk_all_tx.setChecked(bool(row["all_tx_search"]))
         self._chk_w50_m60.setChecked(bool(row["w50_m60_optional"]))
@@ -322,6 +351,7 @@ class CompetitionSettingsDialog(QDialog):
                 """
                 UPDATE competition SET
                     name=?, date=?, start_time_g1=?, si_base_time=?,
+                    group_interval_min=?, time_limit_min=?, regional_prefectures=?,
                     all_tx_search=?, w50_m60_optional=?, beacon_search=?,
                     group_score_count=?,
                     winners_w19=?, winners_w21=?, winners_w35=?, winners_w50=?,
@@ -334,6 +364,9 @@ class CompetitionSettingsDialog(QDialog):
                     self._date_edit.date().toString("yyyy-MM-dd"),
                     self._start_time_edit.time().toString("HH:mm:ss"),
                     self._si_base_edit.time().toString("HH:mm:ss"),
+                    self._group_interval_spin.value(),
+                    self._time_limit_spin.value(),
+                    self._regional_edit.text().strip() or None,
                     int(self._chk_all_tx.isChecked()),
                     int(self._chk_w50_m60.isChecked()),
                     int(self._chk_beacon.isChecked()),
@@ -387,17 +420,21 @@ class CompetitionSettingsDialog(QDialog):
                 """
                 INSERT INTO competition (
                     name, date, start_time_g1, si_base_time,
+                    group_interval_min, time_limit_min, regional_prefectures,
                     all_tx_search, w50_m60_optional, beacon_search,
                     group_score_count,
                     winners_w19, winners_w21, winners_w35, winners_w50,
                     winners_m19, winners_m21, winners_m40, winners_m50, winners_m60
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     name,
                     self._date_edit.date().toString("yyyy-MM-dd"),
                     self._start_time_edit.time().toString("HH:mm:ss"),
                     self._si_base_edit.time().toString("HH:mm:ss"),
+                    self._group_interval_spin.value(),
+                    self._time_limit_spin.value(),
+                    self._regional_edit.text().strip() or None,
                     int(self._chk_all_tx.isChecked()),
                     int(self._chk_w50_m60.isChecked()),
                     int(self._chk_beacon.isChecked()),
@@ -438,6 +475,9 @@ def _create_tables(conn: sqlite3.Connection) -> None:
             date                TEXT,
             start_time_g1       TEXT,
             si_base_time        TEXT,
+            group_interval_min  INTEGER NOT NULL DEFAULT 5,
+            time_limit_min      INTEGER NOT NULL DEFAULT 120,
+            regional_prefectures TEXT,
             all_tx_search       INTEGER NOT NULL DEFAULT 0,
             w50_m60_optional    INTEGER NOT NULL DEFAULT 0,
             beacon_search       INTEGER NOT NULL DEFAULT 0,
